@@ -1,0 +1,15 @@
+{
+  "name": "obert-ai-web",
+  "version": "1.0.0",
+  "description": "AI-powered code builder",
+  "main": "dev-server.js",
+  "scripts": {
+    "start": "node dev-server.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {},
+  "author": "",
+  "license": "MIT"
+}

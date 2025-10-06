@@ -1,0 +1,2538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obert - AI Code Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CodeMirror for syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+
+  <!-- JSZip for ZIP export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0B1017;
+      color: #E5E7EB;
+      overflow: hidden;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Top bar */
+    .top-bar {
+      background: #111827;
+      border-bottom: 1px solid #1F2937;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .logo:hover {
+      opacity: 0.8;
+    }
+
+    .project-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .project-name {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 0.375rem;
+      color: #E5E7EB;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .project-name:hover {
+      background: #1F2937;
+      border-color: #374151;
+    }
+
+    .project-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 0.5rem;
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      min-width: 200px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+
+    .project-menu.active {
+      display: block;
+    }
+
+    .project-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: #E5E7EB;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 0.875rem;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+
+    .project-menu-item:hover {
+      background: #374151;
+    }
+
+    .project-menu-item:first-child {
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .project-menu-item:last-child {
+      border-radius: 0 0 0.5rem 0.5rem;
+    }
+
+    .project-menu-separator {
+      height: 1px;
+      background: #374151;
+      margin: 0.25rem 0;
+    }
+
+    .saved-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: #34D399;
+      font-size: 0.875rem;
+    }
+
+    .search-bar {
+      flex: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+      color: #E5E7EB;
+      font-size: 0.875rem;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #818CF8;
+      box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9CA3AF;
+    }
+
+    .kbd {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #374151;
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      color: #9CA3AF;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: #1F2937;
+      color: #E5E7EB;
+    }
+
+    .publish-btn {
+      background: #818CF8;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .publish-btn:hover {
+      background: #6366F1;
+    }
+
+    /* Main layout */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar - Split between Files and AI */
+    .sidebar {
+      width: 378px;
+      background: #111827;
+      border-right: 1px solid #1F2937;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .files-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #1F2937;
+      min-height: 0;
+    }
+
+    .files-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #1F2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .files-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+      position: relative;
+    }
+
+    .file-item:hover {
+      background: #1F2937;
+    }
+
+    .file-item.active {
+      background: #1F2937;
+      border-color: #818CF8;
+    }
+
+    .file-icon {
+      color: #818CF8;
+      flex-shrink: 0;
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 0.875rem;
+      color: #E5E7EB;
+    }
+
+    .file-delete {
+      opacity: 0;
+      background: transparent;
+      border: none;
+      color: #F87171;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .file-item:hover .file-delete {
+      opacity: 1;
+    }
+
+    .file-delete:hover {
+      background: #1F2937;
+    }
+
+    .ai-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .sidebar-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #1F2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .file-item:hover {
+      background: #1F2937;
+    }
+
+    .file-item.active {
+      background: #1F2937;
+      border-color: #818CF8;
+    }
+
+    .file-icon {
+      color: #818CF8;
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 0.875rem;
+      color: #E5E7EB;
+    }
+
+    /* Main panel */
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0B1017;
+    }
+
+    .panel-header {
+      background: #111827;
+      border-bottom: 1px solid #1F2937;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .file-tab {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+    }
+
+    .file-tab.active {
+      color: #E5E7EB;
+      border-bottom-color: #818CF8;
+    }
+
+    .view-toggles {
+      display: flex;
+      gap: 0.25rem;
+      background: #1F2937;
+      padding: 0.25rem;
+      border-radius: 0.5rem;
+    }
+
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: transparent;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+
+    .view-btn.active {
+      background: #374151;
+      color: #E5E7EB;
+    }
+
+    .view-btn:hover:not(.active) {
+      color: #E5E7EB;
+    }
+
+    /* Editor/Preview area */
+    .content-area {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .editor-container,
+    .preview-container {
+      display: none;
+    }
+
+    .editor-container.active {
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+    }
+
+    .preview-container.active {
+      display: flex;
+      flex: 1;
+    }
+
+    .split-view .editor-container,
+    .split-view .preview-container {
+      display: flex;
+      flex: 1;
+    }
+
+    .split-view .editor-container {
+      flex-direction: row;
+    }
+
+    .files-panel {
+      width: 280px;
+      background: #111827;
+      border-right: 1px solid #1F2937;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    textarea {
+      flex: 1;
+      background: #0B1017;
+      color: #E5E7EB;
+      border: none;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    /* CodeMirror customization */
+    .CodeMirror {
+      flex: 1;
+      height: 100% !important;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .CodeMirror-gutters {
+      background: #111827 !important;
+      border-right: 1px solid #1F2937 !important;
+    }
+
+    .CodeMirror-linenumber {
+      color: #6B7280 !important;
+      padding: 0 8px !important;
+    }
+
+    .preview-frame {
+      flex: 1;
+      background: white;
+      border: none;
+    }
+
+    .ai-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+    }
+
+    .message.user {
+      background: #1F2937;
+      margin-left: 2rem;
+    }
+
+    .message.assistant {
+      background: #374151;
+      margin-right: 2rem;
+    }
+
+    .message-label {
+      font-size: 0.75rem;
+      color: #9CA3AF;
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+
+    .ai-input-area {
+      padding: 1rem;
+      background: #111827;
+      border-top: 1px solid #1F2937;
+      position: relative;
+    }
+
+    .upload-btn {
+      position: absolute;
+      bottom: 2rem;
+      left: 1.5rem;
+      width: 36px;
+      height: 36px;
+      background: #374151;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9CA3AF;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .upload-btn:hover {
+      background: #4B5563;
+      color: #E5E7EB;
+    }
+
+    .upload-input {
+      display: none;
+    }
+
+    .ai-input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .ai-input {
+      width: 100%;
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1rem 3.5rem 1rem 3.5rem;
+      color: #E5E7EB;
+      font-size: 0.875rem;
+      resize: none;
+      outline: none;
+      min-height: 69px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .ai-input:focus {
+      border-color: #818CF8;
+    }
+
+    .send-btn {
+      position: absolute;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      background: #818CF8;
+      color: white;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+    }
+
+    .send-btn:hover {
+      background: #6366F1;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Status bar */
+    .status-bar {
+      background: #0F172A;
+      border-top: 1px solid #1F2937;
+      padding: 0.375rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #9CA3AF;
+    }
+
+    .status-left,
+    .status-center,
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .error-count { color: #F87171; }
+    .warning-count { color: #F59E0B; }
+    .success-indicator { color: #34D399; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4B5563;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Light Theme */
+    body.light-theme {
+      background: #F9FAFB;
+      color: #111827;
+    }
+
+    body.light-theme .top-bar {
+      background: #FFFFFF;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .project-name:hover {
+      background: #F3F4F6;
+      border-color: #D1D5DB;
+    }
+
+    body.light-theme .project-menu {
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .project-name {
+      color: #111827;
+    }
+
+    body.light-theme .project-menu-item {
+      color: #111827;
+    }
+
+    body.light-theme .project-menu-item:hover {
+      background: #F3F4F6;
+    }
+
+    body.light-theme .project-menu-separator {
+      border-top: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .saved-badge {
+      color: #059669;
+    }
+
+    body.light-theme .search-bar {
+      background: #F3F4F6;
+      border-color: #D1D5DB;
+    }
+
+    body.light-theme .search-input {
+      background: transparent;
+      color: #111827;
+    }
+
+    body.light-theme .search-input::placeholder {
+      color: #9CA3AF;
+    }
+
+    body.light-theme .kbd {
+      background: #E5E7EB;
+      color: #6B7280;
+    }
+
+    body.light-theme .icon-btn {
+      background: transparent;
+      color: #6B7280;
+    }
+
+    body.light-theme .icon-btn:hover {
+      background: #F3F4F6;
+      color: #111827;
+    }
+
+    body.light-theme .publish-btn {
+      background: #818CF8;
+      color: #FFFFFF;
+    }
+
+    body.light-theme .publish-btn:hover {
+      background: #6366F1;
+    }
+
+    body.light-theme .sidebar {
+      background: #FFFFFF;
+      border-right: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .message {
+      background: #F9FAFB;
+      border-color: #E5E7EB;
+    }
+
+    body.light-theme .message.user {
+      background: #EEF2FF;
+    }
+
+    body.light-theme .message-label {
+      color: #6B7280;
+    }
+
+    body.light-theme .ai-input {
+      background: #F3F4F6;
+      border-color: #D1D5DB;
+      color: #111827;
+    }
+
+    body.light-theme .send-btn {
+      background: #818CF8;
+    }
+
+    body.light-theme .upload-btn {
+      color: #6B7280;
+    }
+
+    body.light-theme .upload-btn:hover {
+      background: #F3F4F6;
+      color: #111827;
+    }
+
+    body.light-theme .editor-tabs {
+      background: #F9FAFB;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .tab-btn {
+      color: #6B7280;
+      border-color: transparent;
+    }
+
+    body.light-theme .tab-btn.active {
+      background: #FFFFFF;
+      color: #111827;
+      border-color: #E5E7EB;
+      border-bottom-color: #FFFFFF;
+    }
+
+    body.light-theme .add-file-btn {
+      color: #6B7280;
+    }
+
+    body.light-theme .add-file-btn:hover {
+      color: #111827;
+    }
+
+    body.light-theme .file-item {
+      color: #111827;
+    }
+
+    body.light-theme .file-item:hover {
+      background: #F3F4F6;
+    }
+
+    body.light-theme .file-item.active {
+      background: #EEF2FF;
+      color: #818CF8;
+    }
+
+    body.light-theme .view-controls {
+      background: #F9FAFB;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .view-btn {
+      color: #6B7280;
+    }
+
+    body.light-theme .view-btn.active {
+      color: #111827;
+      background: #E5E7EB;
+    }
+
+    body.light-theme .CodeMirror {
+      background: #FFFFFF;
+      color: #111827;
+    }
+
+    body.light-theme .CodeMirror-gutters {
+      background: #F9FAFB;
+      border-right: 1px solid #E5E7EB;
+    }
+
+    body.light-theme .CodeMirror-linenumber {
+      color: #9CA3AF;
+    }
+
+    body.light-theme .preview-frame {
+      background: #FFFFFF;
+    }
+
+    body.light-theme .logo {
+      color: #111827;
+    }
+
+    /* Settings Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #111827;
+      border: 1px solid #1F2937;
+      border-radius: 0.75rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #1F2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #E5E7EB;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #1F2937;
+      color: #E5E7EB;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #E5E7EB;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-textarea {
+      width: 100%;
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      color: #E5E7EB;
+      font-size: 0.875rem;
+      font-family: system-ui, -apple-system, sans-serif;
+      resize: vertical;
+      min-height: 150px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-textarea:focus {
+      border-color: #818CF8;
+      box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.1);
+    }
+
+    .form-checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-checkbox {
+      width: 1.125rem;
+      height: 1.125rem;
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      accent-color: #818CF8;
+    }
+
+    .form-checkbox:focus {
+      outline: 2px solid #818CF8;
+      outline-offset: 2px;
+    }
+
+    .form-radio {
+      width: 1.125rem;
+      height: 1.125rem;
+      cursor: pointer;
+      accent-color: #818CF8;
+    }
+
+    .form-radio:focus {
+      outline: 2px solid #818CF8;
+      outline-offset: 2px;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #1F2937;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .modal-btn-primary {
+      background: #818CF8;
+      color: white;
+    }
+
+    .modal-btn-primary:hover {
+      background: #6366F1;
+    }
+
+    .modal-btn-secondary {
+      background: transparent;
+      border: 1px solid #374151;
+      color: #E5E7EB;
+    }
+
+    .modal-btn-secondary:hover {
+      background: #1F2937;
+    }
+
+    /* Light theme modal styles */
+    body.light-theme .modal-content {
+      background: #FFFFFF;
+      border-color: #E5E7EB;
+    }
+
+    body.light-theme .modal-header {
+      border-bottom-color: #E5E7EB;
+    }
+
+    body.light-theme .modal-title {
+      color: #111827;
+    }
+
+    body.light-theme .modal-close {
+      color: #6B7280;
+    }
+
+    body.light-theme .modal-close:hover {
+      background: #F3F4F6;
+      color: #111827;
+    }
+
+    body.light-theme .form-label {
+      color: #111827;
+    }
+
+    body.light-theme .form-textarea {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+      color: #111827;
+    }
+
+    body.light-theme .form-textarea:focus {
+      border-color: #818CF8;
+    }
+
+    body.light-theme .form-checkbox {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+    }
+
+    body.light-theme .modal-footer {
+      border-top-color: #E5E7EB;
+    }
+
+    body.light-theme .modal-btn-secondary {
+      border-color: #D1D5DB;
+      color: #111827;
+    }
+
+    body.light-theme .modal-btn-secondary:hover {
+      background: #F3F4F6;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="logo">
+        <img src="https://inspairation.com/Obert/Images/Obert_Circle.png" alt="Obert" style="height: 32px; width: auto;">
+      </div>
+
+      <!-- Project Dropdown -->
+      <div class="project-dropdown">
+        <button class="project-name" id="projectDropdownBtn">
+          <span id="projectNameText">My Obert Project</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M6 8L2 4h8l-4 4z"/>
+          </svg>
+        </button>
+        <div class="project-menu" id="projectMenu">
+          <button class="project-menu-item" onclick="renameProject()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
+            </svg>
+            Rename...
+          </button>
+          <button class="project-menu-item" onclick="duplicateProject()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4 2a2 2 0 012-2h6a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v10a1 1 0 001 1h6a1 1 0 001-1V2a1 1 0 00-1-1H6z"/>
+              <path d="M2 4a2 2 0 012-2v1a1 1 0 00-1 1v10a1 1 0 001 1h6a1 1 0 001-1v1a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/>
+            </svg>
+            Duplicate
+          </button>
+          <div class="project-menu-separator"></div>
+          <button class="project-menu-item" onclick="clearProject()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+              <path d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+            Clear Project
+          </button>
+        </div>
+      </div>
+
+      <div class="saved-badge">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+        </svg>
+        <span>Saved</span>
+      </div>
+
+      <div class="search-bar">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+          <circle cx="7" cy="7" r="5" stroke-width="1.5"/>
+          <path d="M11 11l3 3" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input type="text" class="search-input" placeholder="Search or command...">
+        <span class="kbd">Ctrl+K</span>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="exportBtn" title="Export & Open in Browser">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="knowledgeBtn" title="Knowledge">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="themeToggle" title="Toggle theme">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+          </svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" title="Git">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/>
+          </svg>
+        </button>
+        <button class="publish-btn">Publish</button>
+        <button class="icon-btn" title="User">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Sidebar - Just AI -->
+      <div class="sidebar">
+        <div class="ai-chat">
+          <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+              <div class="message-label">Obert</div>
+              <div>Hi! I can help you build apps and websites. What would you like to create?</div>
+            </div>
+          </div>
+        </div>
+        <div class="ai-input-area">
+          <button class="upload-btn" id="uploadBtn" title="Upload files">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/>
+            </svg>
+          </button>
+          <input type="file" id="uploadInput" class="upload-input" accept=".html,.htm,.css,.js">
+          <div class="ai-input-wrapper">
+            <textarea id="aiInput" class="ai-input" placeholder="Ask Obert..." rows="3"></textarea>
+            <button class="send-btn" id="sendBtn" title="Send message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Panel -->
+      <div class="main-panel">
+        <div class="panel-header">
+          <div class="file-tabs">
+          </div>
+          <div class="toolbar-actions">
+            <button class="icon-btn" id="downloadBtn" title="Download HTML">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 12l-4-4h2.5V2h3v6H12l-4 4z"/>
+                <path d="M14 13v1H2v-1h12z"/>
+              </svg>
+            </button>
+            <button class="icon-btn" id="runBtn" title="Run">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4 3l8 5-8 5V3z"/>
+              </svg>
+            </button>
+            <button class="icon-btn" title="Format">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.5 2a.5.5 0 00-.5.5v11a.5.5 0 001 0v-11a.5.5 0 00-.5-.5zm3 0a.5.5 0 00-.5.5v11a.5.5 0 001 0v-11a.5.5 0 00-.5-.5zm3 0a.5.5 0 00-.5.5v11a.5.5 0 001 0v-11a.5.5 0 00-.5-.5z"/>
+              </svg>
+            </button>
+            <button class="icon-btn" title="More">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="8" cy="3" r="1.5"/>
+                <circle cx="8" cy="8" r="1.5"/>
+                <circle cx="8" cy="13" r="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="view-toggles">
+            <button class="view-btn active" data-view="code">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.854 4.146a.5.5 0 010 .708L1.707 8l3.147 3.146a.5.5 0 01-.708.708l-3.5-3.5a.5.5 0 010-.708l3.5-3.5a.5.5 0 01.708 0zm6.292 0a.5.5 0 000 .708L14.293 8l-3.147 3.146a.5.5 0 00.708.708l3.5-3.5a.5.5 0 000-.708l-3.5-3.5a.5.5 0 00-.708 0z"/>
+              </svg>
+              Code
+            </button>
+            <button class="view-btn" data-view="preview">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM0 8a8 8 0 1116 0A8 8 0 010 8z"/>
+                <path d="M8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM4.5 8a3.5 3.5 0 117 0 3.5 3.5 0 01-7 0z"/>
+              </svg>
+              Preview
+            </button>
+            <button class="view-btn" data-view="split">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h6a.5.5 0 00.5-.5v-13a.5.5 0 00-.5-.5h-6zm7 0a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h6a.5.5 0 00.5-.5v-13a.5.5 0 00-.5-.5h-6z"/>
+              </svg>
+              Split
+            </button>
+          </div>
+        </div>
+
+        <div class="content-area" id="contentArea">
+          <!-- Code View with Files + Editor -->
+          <div class="editor-container active" id="editorContainer">
+            <div class="files-panel">
+              <div class="files-header">
+                <div class="files-title">FILES</div>
+                <button class="icon-btn" id="addFileBtn" title="Add File">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="file-list" id="fileList"></div>
+            </div>
+            <textarea id="codeEditor" spellcheck="false"></textarea>
+          </div>
+
+          <!-- Preview -->
+          <div class="preview-container" id="previewContainer">
+            <iframe id="previewFrame" class="preview-frame"></iframe>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-item">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M2 3.5A1.5 1.5 0 013.5 2h5A1.5 1.5 0 0110 3.5v5A1.5 1.5 0 018.5 10h-5A1.5 1.5 0 012 8.5v-5z"/>
+          </svg>
+          <span id="branchName">main</span>
+        </div>
+        <div class="status-item success-indicator">
+          <span>Auto-saved</span>
+        </div>
+      </div>
+      <div class="status-center">
+        <div class="status-item">
+          <span id="viewStatus">View: Code</span>
+        </div>
+        <div class="status-item">
+          <span id="tokenStatus">Tokens: 400K left</span>
+        </div>
+      </div>
+      <div class="status-right">
+        <div class="status-item error-count">
+          <span id="errorCount">0 Errors</span>
+        </div>
+        <div class="status-item warning-count">
+          <span id="warningCount">0 Warnings</span>
+        </div>
+        <div class="status-item">
+          <span>Ln 1, Col 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">AI Settings</h2>
+        <button class="modal-close" id="closeSettingsModal" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="customPromptInput" class="form-label">Custom System Prompt</label>
+          <textarea
+            id="customPromptInput"
+            class="form-textarea"
+            placeholder="Enter additional instructions for the AI (e.g., 'Always use TypeScript', 'Focus on accessibility', 'Use Tailwind CSS')..."
+          ></textarea>
+        </div>
+        <div class="form-group">
+          <div class="form-checkbox-wrapper">
+            <input
+              type="checkbox"
+              id="persistPromptCheckbox"
+              class="form-checkbox"
+            >
+            <label for="persistPromptCheckbox" class="form-label" style="margin-bottom: 0;">Save permanently (persist across sessions)</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelSettingsBtn">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="saveSettingsBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Knowledge Modal -->
+  <div class="modal-overlay" id="knowledgeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Knowledge Base</h2>
+        <button class="modal-close" id="closeKnowledgeModal" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="knowledgeInput" class="form-label">Add Knowledge / Instructions</label>
+          <textarea
+            id="knowledgeInput"
+            class="form-textarea"
+            placeholder="Add instructions or context for the AI (e.g., 'Always use TypeScript', 'Follow Material Design guidelines', 'Use ES6+ syntax')..."
+            rows="8"
+          ></textarea>
+          <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+            This knowledge will be included in every AI request to guide its responses.
+          </p>
+        </div>
+        <div class="form-group">
+          <div class="form-checkbox-wrapper">
+            <input
+              type="radio"
+              id="knowledgeSession"
+              name="knowledgeScope"
+              value="session"
+              checked
+              class="form-radio"
+            >
+            <label for="knowledgeSession" class="form-label" style="margin-bottom: 0;">
+              This session only
+            </label>
+          </div>
+          <p style="font-size: 0.75rem; color: #6b7280; margin-left: 1.5rem; margin-top: 0.25rem;">
+            Knowledge will be cleared when you refresh the page
+          </p>
+        </div>
+        <div class="form-group">
+          <div class="form-checkbox-wrapper">
+            <input
+              type="radio"
+              id="knowledgeForever"
+              name="knowledgeScope"
+              value="forever"
+              class="form-radio"
+            >
+            <label for="knowledgeForever" class="form-label" style="margin-bottom: 0;">
+              Save forever
+            </label>
+          </div>
+          <p style="font-size: 0.75rem; color: #6b7280; margin-left: 1.5rem; margin-top: 0.25rem;">
+            Knowledge will persist across sessions (stored in browser)
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelKnowledgeBtn">Cancel</button>
+        <button class="modal-btn modal-btn-secondary" id="clearKnowledgeBtn">Clear</button>
+        <button class="modal-btn modal-btn-primary" id="saveKnowledgeBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // File system
+    const FILES = {
+      'index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obert - AI Code Builder</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .container {
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+    p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to Obert</h1>
+    <p>Start building with AI assistance!</p>
+  </div>
+</body>
+</html>`,
+      'styles.css': `* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  text-align: center;
+  max-width: 600px;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+button {
+  margin-top: 2rem;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}`,
+      'app.js': `document.addEventListener('DOMContentLoaded', () => {
+  console.log('Obert app loaded');
+
+  const btn = document.getElementById('testBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      alert('Hello from Obert!');
+    });
+  }
+});`
+    };
+
+    let currentFile = 'index.html';
+    let currentView = 'code';
+    let isAIProcessing = false;
+    let editor; // CodeMirror instance
+
+    // Custom system prompt settings
+    let customSystemPrompt = localStorage.getItem('obert_custom_prompt') || '';
+    let persistCustomPrompt = localStorage.getItem('obert_persist_prompt') === 'true';
+
+    // Knowledge base settings
+    let savedKnowledge = localStorage.getItem('obert_knowledge') || '';
+    let knowledgePersist = localStorage.getItem('obert_knowledge_persist') === 'true';
+
+    // Elements
+    const codeEditorTextarea = document.getElementById('codeEditor');
+    const previewFrame = document.getElementById('previewFrame');
+    const fileList = document.getElementById('fileList');
+    const contentArea = document.getElementById('contentArea');
+    const editorContainer = document.getElementById('editorContainer');
+    const previewContainer = document.getElementById('previewContainer');
+    const chatMessages = document.getElementById('chatMessages');
+    const aiInput = document.getElementById('aiInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const viewStatus = document.getElementById('viewStatus');
+    const runBtn = document.getElementById('runBtn');
+
+    // Render file list
+    function renderFileList() {
+      fileList.innerHTML = '';
+      Object.keys(FILES).sort().forEach(fileName => {
+        const item = document.createElement('div');
+        item.className = `file-item ${fileName === currentFile ? 'active' : ''}`;
+        item.innerHTML = `
+          <svg class="file-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 1.5a.5.5 0 00-.5.5v12a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V4.5L9.5 1.5H4z"/>
+          </svg>
+          <span class="file-name">${fileName}</span>
+          <button class="file-delete" title="Delete file">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+              <path d="M2.146 2.854a.5.5 0 11.708-.708L6 5.293l3.146-3.147a.5.5 0 01.708.708L6.707 6l3.147 3.146a.5.5 0 01-.708.708L6 6.707l-3.146 3.147a.5.5 0 01-.708-.708L5.293 6 2.146 2.854z"/>
+            </svg>
+          </button>
+        `;
+        item.querySelector('.file-name').addEventListener('click', () => loadFile(fileName));
+        item.querySelector('.file-delete').addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete ${fileName}?`)) {
+            delete FILES[fileName];
+            if (currentFile === fileName) {
+              currentFile = Object.keys(FILES)[0] || 'index.html';
+            }
+            renderFileList();
+            loadFile(currentFile);
+          }
+        });
+        fileList.appendChild(item);
+      });
+    }
+
+    // LocalStorage functions
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem('obert_files', JSON.stringify(FILES));
+        localStorage.setItem('obert_current_file', currentFile);
+      } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+      }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const saved = localStorage.getItem('obert_files');
+        const savedFile = localStorage.getItem('obert_current_file');
+
+        if (saved) {
+          const parsedFiles = JSON.parse(saved);
+          Object.assign(FILES, parsedFiles);
+          console.log('✅ Loaded project from localStorage');
+        }
+
+        if (savedFile && FILES[savedFile]) {
+          currentFile = savedFile;
+        }
+      } catch (e) {
+        console.error('Failed to load from localStorage:', e);
+      }
+    }
+
+    // Initialize
+    function init() {
+      // Load saved project
+      loadFromLocalStorage();
+
+      // Initialize CodeMirror
+      editor = CodeMirror.fromTextArea(codeEditorTextarea, {
+        mode: 'htmlmixed',
+        theme: 'monokai',
+        lineNumbers: true,
+        lineWrapping: true,
+        indentUnit: 2,
+        tabSize: 2,
+        autofocus: true
+      });
+
+      // Auto-save on CodeMirror change
+      editor.on('change', () => {
+        FILES[currentFile] = editor.getValue();
+        saveToLocalStorage();
+        if (currentView === 'preview' || currentView === 'split') {
+          debounce(updatePreview, 500)();
+        }
+      });
+
+      renderFileList();
+      loadFile(currentFile);
+      updatePreview();
+      switchView('code'); // Start with code view
+
+      // Check for URL prompt parameter and auto-submit
+      const urlParams = new URLSearchParams(window.location.search);
+      const promptParam = urlParams.get('prompt');
+      console.log('URL params:', window.location.search);
+      console.log('Prompt param:', promptParam);
+
+      if (promptParam) {
+        console.log('Found prompt parameter, will auto-submit:', promptParam);
+        // Set the input value
+        aiInput.value = promptParam;
+        // Auto-submit after a short delay to let everything load
+        setTimeout(() => {
+          console.log('Auto-submitting now...');
+          if (aiInput.value) {
+            sendAIMessage();
+          } else {
+            console.error('AI input is empty!');
+          }
+        }, 1000);
+      }
+
+      // View toggle buttons
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const view = btn.dataset.view;
+          switchView(view);
+        });
+      });
+
+      // Run button
+      runBtn.addEventListener('click', updatePreview);
+
+      // Download button - Export as ZIP
+      document.getElementById('downloadBtn').addEventListener('click', async () => {
+        const zip = new JSZip();
+
+        // Add all files to ZIP
+        Object.keys(FILES).forEach(fileName => {
+          zip.file(fileName, FILES[fileName]);
+        });
+
+        // Generate ZIP file
+        const blob = await zip.generateAsync({type: 'blob'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'obert-project.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        addChatMessage('assistant', '✅ Project exported as ZIP!');
+      });
+
+      // Add file button
+      document.getElementById('addFileBtn').addEventListener('click', () => {
+        const fileName = prompt('Enter file name (e.g., script.js, style.css):');
+        if (fileName && !FILES[fileName]) {
+          FILES[fileName] = '';
+          renderFileList();
+          loadFile(fileName);
+        } else if (FILES[fileName]) {
+          alert('File already exists!');
+        }
+      });
+
+      // Upload button
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadInput = document.getElementById('uploadInput');
+
+      uploadBtn.addEventListener('click', () => {
+        uploadInput.click();
+      });
+
+      uploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            FILES[file.name] = event.target.result;
+            renderFileList();
+            loadFile(file.name);
+            updatePreview();
+            addChatMessage('assistant', `✅ Uploaded ${file.name} successfully!`);
+          };
+          reader.readAsText(file);
+        }
+      });
+
+      // AI send button
+      sendBtn.addEventListener('click', () => {
+        console.log('Send button clicked!');
+        sendAIMessage();
+      });
+      aiInput.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+          console.log('Ctrl+Enter pressed!');
+          sendAIMessage();
+        }
+      });
+    }
+
+    function loadFile(fileName) {
+      currentFile = fileName;
+
+      // Update CodeMirror editor
+      if (editor) {
+        const content = FILES[fileName] || '';
+        editor.setValue(content);
+
+        // Set mode based on file extension
+        const ext = fileName.split('.').pop();
+        const modes = {
+          'html': 'htmlmixed',
+          'htm': 'htmlmixed',
+          'css': 'css',
+          'js': 'javascript',
+          'json': 'javascript'
+        };
+        editor.setOption('mode', modes[ext] || 'htmlmixed');
+      }
+
+      renderFileList();
+      saveToLocalStorage(); // Save current file selection
+    }
+
+    function switchView(view) {
+      currentView = view;
+
+      // Update button states
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+
+      // Update containers
+      editorContainer.classList.remove('active');
+      previewContainer.classList.remove('active');
+      contentArea.classList.remove('split-view');
+
+      if (view === 'code') {
+        editorContainer.classList.add('active');
+        viewStatus.textContent = 'View: Code';
+      } else if (view === 'preview') {
+        previewContainer.classList.add('active');
+        viewStatus.textContent = 'View: Preview';
+        updatePreview();
+      } else if (view === 'split') {
+        contentArea.classList.add('split-view');
+        editorContainer.classList.add('active');
+        previewContainer.classList.add('active');
+        viewStatus.textContent = 'View: Split';
+        updatePreview();
+      }
+    }
+
+    async function updatePreview() {
+      const html = FILES['index.html'] || '';
+
+      // Send HTML to localhost:5173 dev server
+      try {
+        const response = await fetch('http://localhost:5173/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ html })
+        });
+
+        if (response.ok) {
+          // Update iframe to show localhost:5173 (root)
+          if (previewFrame.src !== 'http://localhost:5173/') {
+            previewFrame.src = 'http://localhost:5173/';
+          } else {
+            // Reload if already pointing there
+            previewFrame.contentWindow.location.reload();
+          }
+        } else {
+          console.error('Failed to update preview server');
+          // Fallback to blob URL if server is not running
+          fallbackPreview(html);
+        }
+      } catch (error) {
+        console.error('Preview server not running:', error);
+        // Fallback to blob URL
+        fallbackPreview(html);
+      }
+    }
+
+    function fallbackPreview(html) {
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      previewFrame.src = url;
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    async function sendAIMessage() {
+      const userMessage = aiInput.value.trim();
+      if (!userMessage || isAIProcessing) return;
+
+      console.log('Sending message:', userMessage);
+
+      // Add user message
+      addChatMessage('user', userMessage);
+      aiInput.value = '';
+
+      isAIProcessing = true;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Thinking...';
+
+      try {
+        // Add placeholder for AI response
+        const aiMsg = addChatMessage('assistant', 'Thinking...');
+
+        console.log('Calling DeepSeek API via proxy...');
+
+        // Build system message with optional custom prompt
+        let systemMessage = `You are an expert web developer. Your ONLY job is to write complete HTML files.
+
+⚠️ CRITICAL: You MUST respond ONLY with HTML code wrapped in \`\`\`html code blocks.
+
+RESPONSE FORMAT (MANDATORY):
+\`\`\`html
+<!DOCTYPE html>
+<html>
+...complete HTML file...
+</html>
+\`\`\`
+
+❌ FORBIDDEN - DO NOT INCLUDE:
+- Plans, explanations, or discussions
+- Markdown text outside code blocks
+- Diffs, patches, or file paths
+- Test code or separate files
+- ANY text before or after the HTML code block
+
+✅ REQUIRED:
+- Complete, self-contained HTML file
+- All CSS in <style> tags
+- All JavaScript in <script> tags
+- Starts with \`\`\`html
+- Ends with \`\`\`
+
+If you cannot provide HTML, still respond with a basic HTML template wrapped in \`\`\`html blocks.
+
+🚫 ABSOLUTELY FORBIDDEN:
+- Generic/cookie-cutter designs that look like tutorials
+- Basic styling that looks amateur or unfinished
+- Single-color flat designs without depth
+- Hard-coded values without proper architecture
+- Missing edge cases or error states
+- Inaccessible interfaces
+- Performance bottlenecks
+
+✅ PRODUCTION REQUIREMENTS (NON-NEGOTIABLE):
+
+1. VISUAL EXCELLENCE:
+   - Custom, unique design for EVERY project - no two should look similar
+   - Professional color theory: complementary colors, proper contrast ratios (WCAG AA minimum)
+   - Rich visual depth: layered shadows, subtle gradients, glassmorphism effects
+   - Micro-interactions: button ripples, smooth state transitions, loading states
+   - Premium typography: proper font stacks, line-height (1.5-1.7), letter-spacing
+   - Thoughtful spacing: consistent 4px/8px grid system, never cramped
+
+2. MODERN CSS ARCHITECTURE:
+   - CSS Grid for layouts, Flexbox for components
+   - CSS custom properties (variables) for theming
+   - Backdrop-filter, clip-path, transforms for modern effects
+   - Mobile-first responsive design with fluid typography (clamp())
+   - Dark mode support where appropriate
+   - Smooth 60fps animations using transform/opacity only
+
+3. PRODUCTION JAVASCRIPT:
+   - ES6+ classes with proper encapsulation
+   - Comprehensive error handling (try/catch, input validation)
+   - Debouncing/throttling for performance
+   - LocalStorage for persistence with error recovery (ALWAYS wrap localStorage in try/catch to handle iframe restrictions)
+   - Keyboard navigation (Tab, Enter, Escape)
+   - Loading states and user feedback for all actions
+
+4. ENTERPRISE CODE QUALITY:
+   - Semantic HTML5 (main, section, article, aside, nav)
+   - ARIA labels and roles for screen readers
+   - Form validation with helpful error messages
+   - No console errors or warnings (wrap ALL localStorage/sessionStorage calls in try/catch)
+   - Optimized selectors and event delegation
+   - Comments explaining complex logic only
+
+5. DESIGN INSPIRATION (Match This Quality):
+   - Apple.com - Clean, spacious, elegant
+   - Stripe.com - Modern gradients, subtle animations
+   - Linear.app - Fast, smooth, polished
+   - Vercel.com - Premium dark themes, depth
+   - Airbnb.com - User-friendly, accessible
+
+SPECIFIC STANDARDS:
+
+Color Palettes (Choose & Customize):
+- Dark: Background #0a0a0a, Surface #1a1a1a, Accent #6366f1, Text #e5e7eb
+- Light: Background #ffffff, Surface #f9fafb, Accent #4f46e5, Text #111827
+- Use HSL for easy variations: hsl(220, 90%, 50%) → hsl(220, 90%, 60%) for hover
+
+Typography Scale:
+- Heading: 2.5rem - 3rem (clamp for fluid)
+- Subheading: 1.5rem - 2rem
+- Body: 1rem (16px base)
+- Small: 0.875rem
+- Font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui
+
+Shadows (Layered for Depth):
+- Small: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)
+- Medium: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)
+- Large: 0 10px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08)
+
+Animations:
+- Timing: ease-out for entrances, ease-in for exits
+- Duration: 150ms (micro), 250ms (standard), 400ms (complex)
+- Scale on hover: transform: scale(1.02)
+- Fade in: opacity + translateY
+
+DELIVERABLE CHECKLIST:
+✓ Unique, custom design (not template-like)
+✓ Smooth animations on all interactive elements
+✓ Proper error handling and loading states
+✓ Mobile responsive (test at 375px, 768px, 1440px)
+✓ Accessible (can navigate with keyboard only)
+✓ Professional color scheme with depth
+✓ Production-ready - could deploy immediately
+
+After the code, add 2-3 sentences explaining the unique design choices and key features.`;
+
+        // Append custom system prompt if it exists
+        if (customSystemPrompt) {
+          systemMessage += `\n\nADDITIONAL INSTRUCTIONS:\n${customSystemPrompt}`;
+        }
+
+        // Append knowledge base if it exists (always reload from storage)
+        const currentKnowledge = localStorage.getItem('obert_knowledge') || savedKnowledge;
+        if (currentKnowledge) {
+          systemMessage += `\n\nKNOWLEDGE BASE:\n${currentKnowledge}`;
+        }
+
+        // Prepend format reminder to user message
+        const formattedUserMessage = `[REMINDER: Respond ONLY with complete HTML code in \`\`\`html blocks. No explanations, plans, or text outside the code block.]\n\n${userMessage}`;
+
+        // Call DeepSeek API via local proxy
+        const response = await fetch('http://localhost:3000/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              {
+                role: 'system',
+                content: systemMessage
+              },
+              {
+                role: 'user',
+                content: formattedUserMessage
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 8000
+          })
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+
+        console.log('AI Response:', aiResponse);
+
+        // Try to extract and apply HTML code from the response
+        // Try multiple patterns to catch different formatting
+        let htmlMatch = aiResponse.match(/```html\s*([\s\S]*?)\s*```/i);
+        if (!htmlMatch) {
+          // Match code blocks starting with <!DOCTYPE or <html
+          htmlMatch = aiResponse.match(/```\s*(<[!h][\s\S]*?)\s*```/i);
+        }
+        if (!htmlMatch) {
+          // Try without newlines after ```html
+          htmlMatch = aiResponse.match(/```html([\s\S]*?)```/i);
+        }
+        if (!htmlMatch) {
+          // Try to find any code block that starts with <!DOCTYPE or <html
+          htmlMatch = aiResponse.match(/```[a-z]*\s*(<[!h][\s\S]*?)```/i);
+        }
+        if (!htmlMatch) {
+          // Last resort: look for HTML content without code blocks
+          htmlMatch = aiResponse.match(/(<!DOCTYPE html>[\s\S]*<\/html>)/i);
+        }
+
+        if (htmlMatch && htmlMatch[1]) {
+          const extractedHTML = htmlMatch[1].trim();
+          FILES['index.html'] = extractedHTML;
+          loadFile('index.html');
+          updatePreview();
+
+          // Update the placeholder message with success message
+          aiMsg.querySelector('div:last-child').textContent = '✅ Code updated! Check the Code or Preview tab to see your changes.';
+        } else {
+          console.log('No HTML code block found in response');
+          // Show the full response if no code was found
+          aiMsg.querySelector('div:last-child').textContent = aiResponse;
+        }
+
+      } catch (error) {
+        console.error('AI Error:', error);
+
+        // Check if it's a CORS error
+        const isCORSError = error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.name === 'TypeError';
+
+        if (isCORSError) {
+          const errorMsg = `⚠️ CORS Error: Cannot call DeepSeek API directly from browser.
+
+To fix this, you need to set up a proxy server. See README_PROXY.md for instructions on setting up either:
+- Cloudflare Worker (fastest, free)
+- Vercel Edge Function
+
+For now, here's a demo response:`;
+
+          aiMsg.querySelector('div:last-child').textContent = errorMsg;
+
+          // Show demo response after a delay
+          setTimeout(() => {
+            const demoHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 2.5rem;
+    }
+    p {
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 Demo Page</h1>
+    <p>This is a demo response. Set up a proxy server to get real AI-generated code!</p>
+    <button onclick="alert('Hello from Obert!')">Click Me</button>
+  </div>
+  <script>
+    console.log('Demo page loaded - set up proxy for real AI responses');
+  <\/script>
+</body>
+</html>`;
+            FILES['index.html'] = demoHTML;
+            loadFile('index.html');
+            updatePreview();
+            addChatMessage('assistant', '✅ Demo code applied! Set up a proxy server (see README_PROXY.md) to get real AI responses.');
+          }, 1000);
+        } else {
+          const errorMsg = `Error: ${error.message}`;
+          aiMsg.querySelector('div:last-child').textContent = `Sorry, there was an error: ${errorMsg}`;
+        }
+      } finally {
+        isAIProcessing = false;
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+      }
+    }
+
+    function addChatMessage(role, content) {
+      const msg = document.createElement('div');
+      msg.className = `message ${role}`;
+      msg.innerHTML = `
+        <div class="message-label">${role === 'user' ? 'You' : 'Obert'}</div>
+        <div>${content}</div>
+      `;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return msg;
+    }
+
+    // Project dropdown functions
+    let projectName = localStorage.getItem('obert_project_name') || 'My Obert Project';
+    document.getElementById('projectNameText').textContent = projectName;
+
+    document.getElementById('projectDropdownBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('projectMenu').classList.toggle('active');
+    });
+
+    document.addEventListener('click', () => {
+      document.getElementById('projectMenu').classList.remove('active');
+    });
+
+    function renameProject() {
+      const newName = prompt('Enter new project name:', projectName);
+      if (newName && newName.trim()) {
+        projectName = newName.trim();
+        document.getElementById('projectNameText').textContent = projectName;
+        localStorage.setItem('obert_project_name', projectName);
+      }
+    }
+
+    function duplicateProject() {
+      const newName = projectName + ' (Copy)';
+      projectName = newName;
+      document.getElementById('projectNameText').textContent = projectName;
+      localStorage.setItem('obert_project_name', projectName);
+      addChatMessage('assistant', '✅ Project duplicated!');
+    }
+
+    // Theme toggle functionality
+    let currentTheme = localStorage.getItem('obert_theme') || 'dark';
+    const themeToggle = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        // Update CodeMirror theme
+        if (editor) {
+          editor.setOption('theme', 'default');
+        }
+      } else {
+        document.body.classList.remove('light-theme');
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        // Update CodeMirror theme
+        if (editor) {
+          editor.setOption('theme', 'monokai');
+        }
+      }
+      currentTheme = theme;
+      localStorage.setItem('obert_theme', theme);
+    }
+
+    // Apply saved theme on load
+    applyTheme(currentTheme);
+
+    // Toggle theme on button click
+    themeToggle.addEventListener('click', () => {
+      applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    });
+
+    // Logo click to go back to landing page
+    const logo = document.querySelector('.logo');
+    logo.addEventListener('click', () => {
+      window.location.href = 'landing.html';
+    });
+
+    // Settings modal functionality
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsModal = document.getElementById('closeSettingsModal');
+    const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const customPromptInput = document.getElementById('customPromptInput');
+    const persistPromptCheckbox = document.getElementById('persistPromptCheckbox');
+
+    // Only set up modal if all elements exist
+    if (settingsBtn && settingsModal && closeSettingsModal && cancelSettingsBtn && saveSettingsBtn && customPromptInput && persistPromptCheckbox) {
+      // Open settings modal
+      settingsBtn.addEventListener('click', () => {
+        customPromptInput.value = customSystemPrompt;
+        persistPromptCheckbox.checked = persistCustomPrompt;
+        settingsModal.classList.add('active');
+      });
+
+      // Close modal handlers
+      const closeModal = () => {
+        settingsModal.classList.remove('active');
+      };
+
+      closeSettingsModal.addEventListener('click', closeModal);
+      cancelSettingsBtn.addEventListener('click', closeModal);
+
+    // Close modal when clicking overlay
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        closeModal();
+      }
+    });
+
+    // Save settings
+    saveSettingsBtn.addEventListener('click', () => {
+      customSystemPrompt = customPromptInput.value.trim();
+      persistCustomPrompt = persistPromptCheckbox.checked;
+
+      if (persistCustomPrompt) {
+        // Save to localStorage
+        try {
+          localStorage.setItem('obert_custom_prompt', customSystemPrompt);
+          localStorage.setItem('obert_persist_prompt', 'true');
+        } catch (e) {
+          console.error('Failed to save custom prompt to localStorage:', e);
+        }
+      } else {
+        // Remove from localStorage (session only)
+        try {
+          localStorage.removeItem('obert_custom_prompt');
+          localStorage.setItem('obert_persist_prompt', 'false');
+        } catch (e) {
+          console.error('Failed to update localStorage:', e);
+        }
+      }
+
+      closeModal();
+      addChatMessage('assistant', customSystemPrompt ? 'Custom system prompt saved!' : 'Custom system prompt cleared!');
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && settingsModal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+  }
+
+    // Knowledge modal functionality
+    const knowledgeBtn = document.getElementById('knowledgeBtn');
+    const knowledgeModal = document.getElementById('knowledgeModal');
+    const closeKnowledgeModal = document.getElementById('closeKnowledgeModal');
+    const cancelKnowledgeBtn = document.getElementById('cancelKnowledgeBtn');
+    const clearKnowledgeBtn = document.getElementById('clearKnowledgeBtn');
+    const saveKnowledgeBtn = document.getElementById('saveKnowledgeBtn');
+    const knowledgeInput = document.getElementById('knowledgeInput');
+    const knowledgeSessionRadio = document.getElementById('knowledgeSession');
+    const knowledgeForeverRadio = document.getElementById('knowledgeForever');
+
+    if (knowledgeBtn && knowledgeModal) {
+
+      knowledgeBtn.addEventListener('click', () => {
+        knowledgeInput.value = savedKnowledge;
+        if (knowledgePersist) {
+          knowledgeForeverRadio.checked = true;
+        } else {
+          knowledgeSessionRadio.checked = true;
+        }
+        knowledgeModal.classList.add('active');
+      });
+
+      const closeKnowledgeModalFn = () => {
+        knowledgeModal.classList.remove('active');
+      };
+
+      closeKnowledgeModal.addEventListener('click', closeKnowledgeModalFn);
+      cancelKnowledgeBtn.addEventListener('click', closeKnowledgeModalFn);
+
+      clearKnowledgeBtn.addEventListener('click', () => {
+        knowledgeInput.value = '';
+        savedKnowledge = '';
+        try {
+          localStorage.removeItem('obert_knowledge');
+          localStorage.removeItem('obert_knowledge_persist');
+        } catch (e) {
+          console.error('Failed to clear knowledge from localStorage:', e);
+        }
+        addChatMessage('assistant', '🗑️ Knowledge cleared!');
+        closeKnowledgeModalFn();
+      });
+
+      saveKnowledgeBtn.addEventListener('click', () => {
+        savedKnowledge = knowledgeInput.value.trim();
+        knowledgePersist = knowledgeForeverRadio.checked;
+
+        if (knowledgePersist) {
+          try {
+            localStorage.setItem('obert_knowledge', savedKnowledge);
+            localStorage.setItem('obert_knowledge_persist', 'true');
+          } catch (e) {
+            console.error('Failed to save knowledge to localStorage:', e);
+          }
+        } else {
+          try {
+            localStorage.removeItem('obert_knowledge');
+            localStorage.setItem('obert_knowledge_persist', 'false');
+          } catch (e) {
+            console.error('Failed to update localStorage:', e);
+          }
+        }
+
+        closeKnowledgeModalFn();
+        const scope = knowledgePersist ? 'permanently' : 'for this session';
+        addChatMessage('assistant', savedKnowledge ? `✅ Knowledge saved ${scope}!` : '✅ Knowledge cleared!');
+      });
+
+      // Close modal with Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && knowledgeModal.classList.contains('active')) {
+          closeKnowledgeModalFn();
+        }
+      });
+
+      // Close when clicking overlay
+      knowledgeModal.addEventListener('click', (e) => {
+        if (e.target === knowledgeModal) {
+          closeKnowledgeModalFn();
+        }
+      });
+    }
+
+    // Export button functionality
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const htmlContent = FILES['index.html'];
+        if (!htmlContent) {
+          addChatMessage('assistant', '⚠️ No content to export. Generate some code first!');
+          return;
+        }
+
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = projectName.replace(/\s+/g, '-').toLowerCase() + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        addChatMessage('assistant', '📥 File downloaded! Double-click the HTML file to open it in your browser. Firebase authentication and other features will work there!');
+      });
+    }
+
+    function clearProject() {
+      if (confirm('Are you sure you want to clear this project? This will delete all files.')) {
+        Object.keys(FILES).forEach(key => delete FILES[key]);
+        FILES['index.html'] = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obert - AI Code Builder</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .container {
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+    p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to Obert</h1>
+    <p>Start building with AI assistance!</p>
+  </div>
+</body>
+</html>`;
+        currentFile = 'index.html';
+        renderFileList();
+        loadFile(currentFile);
+        updatePreview();
+        saveToLocalStorage();
+        addChatMessage('assistant', '✅ Project cleared!');
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector('.search-input').focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        // Auto-save is already handled
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        updatePreview();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
