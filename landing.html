@@ -997,7 +997,7 @@
       const prompt = mainInput.value.trim();
       if (prompt) {
         // Redirect to main app with prompt and selected model
-        window.location.href = `obert-ai.html?prompt=${encodeURIComponent(prompt)}&model=${selectedModel}`;
+        window.location.href = `/app?prompt=${encodeURIComponent(prompt)}&model=${selectedModel}`;
       }
     });
 
