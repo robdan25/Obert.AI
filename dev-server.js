@@ -92,8 +92,22 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Main Obert app route
-  if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/app'))) {
+  // Landing page route
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/landing.html')) {
+    fs.readFile(path.join(__dirname, 'landing.html'), 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/html' });
+        res.end('Error loading landing page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+  }
+
+  // Obert app route
+  if (req.method === 'GET' && (req.url === '/app' || req.url === '/obert-ai.html')) {
     fs.readFile(OBERT_FILE, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/html' });
