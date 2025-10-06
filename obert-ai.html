@@ -1841,9 +1841,13 @@ button:hover {
     async function updatePreview() {
       const html = FILES['index.html'] || '';
 
-      // Send HTML to localhost:5173 dev server
+      // Determine the base URL (for production vs local)
+      const baseUrl = window.location.origin;
+      const previewUrl = `${baseUrl}/preview`;
+      const updateUrl = `${baseUrl}/preview/update`;
+
       try {
-        const response = await fetch('http://localhost:5173/update', {
+        const response = await fetch(updateUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -1852,9 +1856,9 @@ button:hover {
         });
 
         if (response.ok) {
-          // Update iframe to show localhost:5173 (root)
-          if (previewFrame.src !== 'http://localhost:5173/') {
-            previewFrame.src = 'http://localhost:5173/';
+          // Update iframe to show preview
+          if (previewFrame.src !== previewUrl) {
+            previewFrame.src = previewUrl;
           } else {
             // Reload if already pointing there
             previewFrame.contentWindow.location.reload();

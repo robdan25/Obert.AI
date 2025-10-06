@@ -2,14 +2,12 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// Use environment variables for Render deployment, fallback to local ports
-const PREVIEW_PORT = process.env.PREVIEW_PORT || 5173;
-const APP_PORT = process.env.PORT || process.env.APP_PORT || 3001;
+const PORT = process.env.PORT || 3001;
 const PREVIEW_FILE = path.join(__dirname, 'preview.html');
 const OBERT_FILE = path.join(__dirname, 'obert-ai.html');
 
-// Preview server on port 5173
-const previewServer = http.createServer((req, res) => {
+// Single unified server for both app and preview
+const server = http.createServer((req, res) => {
   const origin = req.headers.origin || '*';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -22,8 +20,8 @@ const previewServer = http.createServer((req, res) => {
     return;
   }
 
-  // Serve preview at root
-  if (req.method === 'GET' && req.url === '/') {
+  // Preview routes
+  if (req.url === '/preview') {
     fs.readFile(PREVIEW_FILE, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -55,7 +53,7 @@ const previewServer = http.createServer((req, res) => {
 <body>
   <div class="message">
     <h1>🚀 Preview Ready</h1>
-    <p>Generate code in Obert at <a href="http://localhost:3001" style="color: #8b5cf6;">localhost:3001</a></p>
+    <p>Generate code in Obert and it will appear here!</p>
   </div>
 </body>
 </html>`);
@@ -68,7 +66,7 @@ const previewServer = http.createServer((req, res) => {
   }
 
   // Update preview endpoint
-  if (req.method === 'POST' && req.url === '/update') {
+  if (req.method === 'POST' && req.url === '/preview/update') {
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString();
@@ -94,24 +92,8 @@ const previewServer = http.createServer((req, res) => {
     return;
   }
 
-  res.writeHead(404);
-  res.end('Not found');
-});
-
-// Obert app server on port 3001
-const appServer = http.createServer((req, res) => {
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-
-  if (req.method === 'GET' && req.url.startsWith('/')) {
+  // Main Obert app route
+  if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/app'))) {
     fs.readFile(OBERT_FILE, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -128,13 +110,9 @@ const appServer = http.createServer((req, res) => {
   res.end('Not found');
 });
 
-previewServer.listen(PREVIEW_PORT, () => {
-  console.log(`🎨 Preview server running on http://localhost:${PREVIEW_PORT}`);
-});
-
-appServer.listen(APP_PORT, () => {
-  console.log(`🚀 Obert app running on http://localhost:${APP_PORT}`);
-  console.log(`📡 Previews will show at http://localhost:${PREVIEW_PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Obert app running on http://localhost:${PORT}`);
+  console.log(`📡 Preview available at http://localhost:${PORT}/preview`);
 });
 
 // Create initial preview.html if it doesn't exist
