@@ -107,7 +107,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Obert app route
-  if (req.method === 'GET' && (req.url === '/app' || req.url === '/obert-ai.html')) {
+  if (req.method === 'GET' && (req.url.startsWith('/app') || req.url === '/obert-ai.html')) {
     fs.readFile(OBERT_FILE, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/html' });
