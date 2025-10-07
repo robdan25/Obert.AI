@@ -1229,9 +1229,9 @@
   <div class="app-container">
     <!-- Top Bar -->
     <div class="top-bar">
-      <div class="logo">
+      <a href="/" class="logo" style="text-decoration: none; display: flex; align-items: center;">
         <img src="https://inspairation.com/Obert/Images/Obert_Circle.png" alt="Obert" style="height: 32px; width: auto;">
-      </div>
+      </a>
 
       <!-- Project Dropdown -->
       <div class="project-dropdown">
@@ -2128,9 +2128,30 @@ Every Obert output should be indistinguishable from professionally hand-crafted 
       sendBtn.disabled = true;
       // Keep button icon, don't change text
 
+      let messageInterval = null; // Declare outside try block for cleanup
+
       try {
+        // Thinking messages that cycle through
+        const thinkingMessages = [
+          "Refactoring your blueprint…",
+          "Engineering the next step…",
+          "Testing for precision…",
+          "Optimizing your build path…",
+          "Running diagnostics…"
+        ];
+
         // Add animated thinking placeholder
-        const aiMsg = addChatMessage('assistant', '<span class="thinking-indicator">●●●</span>');
+        const aiMsg = addChatMessage('assistant', `<span class="thinking-indicator">●●●</span> <span class="thinking-text" style="color: #64748b; font-style: italic;">${thinkingMessages[0]}</span>`);
+
+        // Cycle through messages every 2 seconds
+        let messageIndex = 0;
+        messageInterval = setInterval(() => {
+          messageIndex = (messageIndex + 1) % thinkingMessages.length;
+          const thinkingTextEl = aiMsg.querySelector('.thinking-text');
+          if (thinkingTextEl) {
+            thinkingTextEl.textContent = thinkingMessages[messageIndex];
+          }
+        }, 2000);
 
         console.log('Calling DeepSeek API via proxy...');
 
@@ -2422,6 +2443,10 @@ For now, here's a demo response:`;
           aiMsg.querySelector('div:last-child').innerHTML = `Sorry, there was an error: ${errorMsg}`;
         }
       } finally {
+        // Clear the thinking message interval
+        if (messageInterval) {
+          clearInterval(messageInterval);
+        }
         isAIProcessing = false;
         sendBtn.disabled = false;
         // Button keeps its icon, no text change needed
