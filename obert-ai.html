@@ -2325,11 +2325,11 @@ After the code, add 2-3 sentences explaining the unique design choices and key f
           updatePreview();
 
           // Update the placeholder message with success message
-          aiMsg.querySelector('div:last-child').textContent = '✅ Code updated! Check the Code or Preview tab to see your changes.';
+          aiMsg.querySelector('div:last-child').innerHTML = '✅ Code updated! Check the Code or Preview tab to see your changes.';
         } else {
           console.log('No HTML code block found in response');
           // Show the full response if no code was found
-          aiMsg.querySelector('div:last-child').textContent = aiResponse;
+          aiMsg.querySelector('div:last-child').innerHTML = aiResponse.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
       } catch (error) {
@@ -2347,7 +2347,7 @@ To fix this, you need to set up a proxy server. See README_PROXY.md for instruct
 
 For now, here's a demo response:`;
 
-          aiMsg.querySelector('div:last-child').textContent = errorMsg;
+          aiMsg.querySelector('div:last-child').innerHTML = errorMsg;
 
           // Show demo response after a delay
           setTimeout(() => {
@@ -2419,7 +2419,7 @@ For now, here's a demo response:`;
           }, 1000);
         } else {
           const errorMsg = `Error: ${error.message}`;
-          aiMsg.querySelector('div:last-child').textContent = `Sorry, there was an error: ${errorMsg}`;
+          aiMsg.querySelector('div:last-child').innerHTML = `Sorry, there was an error: ${errorMsg}`;
         }
       } finally {
         isAIProcessing = false;
