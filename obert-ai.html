@@ -2133,8 +2133,9 @@ After the code, add 2-3 sentences explaining the unique design choices and key f
         // Prepend format reminder to user message
         const formattedUserMessage = `[REMINDER: Respond ONLY with complete HTML code in \`\`\`html blocks. No explanations, plans, or text outside the code block.]\n\n${userMessage}`;
 
-        // Call DeepSeek API via local proxy
-        const response = await fetch('http://localhost:3000/api/chat', {
+        // Call DeepSeek API via server proxy (works both locally and in production)
+        const baseUrl = window.location.origin;
+        const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

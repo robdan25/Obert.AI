@@ -1,8 +1,10 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3001;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-bb97234a93c4497483b4b33fb95caacd';
 const PREVIEW_FILE = path.join(__dirname, 'preview.html');
 const OBERT_FILE = path.join(__dirname, 'obert-ai.html');
 
@@ -87,6 +89,70 @@ const server = http.createServer((req, res) => {
       } catch (error) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // API proxy endpoint for DeepSeek
+  if (req.method === 'POST' && req.url === '/api/chat') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+
+    req.on('end', () => {
+      try {
+        const requestData = JSON.parse(body);
+        const postData = JSON.stringify(requestData);
+
+        const options = {
+          hostname: 'api.deepseek.com',
+          path: '/chat/completions',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+
+        const proxyReq = https.request(options, (proxyRes) => {
+          let responseData = '';
+          proxyRes.on('data', (chunk) => {
+            responseData += chunk;
+          });
+          proxyRes.on('end', () => {
+            console.log('DeepSeek response status:', proxyRes.statusCode);
+            res.writeHead(proxyRes.statusCode, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': origin
+            });
+            res.end(responseData);
+          });
+        });
+
+        proxyReq.on('error', (error) => {
+          console.error('Proxy request error:', error);
+          let errorMessage = error.message;
+          if (error.code === 'ECONNRESET') {
+            errorMessage = 'Connection to DeepSeek API was reset. Please try again.';
+          }
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': origin
+          });
+          res.end(JSON.stringify({ error: errorMessage }));
+        });
+
+        proxyReq.write(postData);
+        proxyReq.end();
+      } catch (error) {
+        res.writeHead(400, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin
+        });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
       }
     });
     return;
