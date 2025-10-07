@@ -1548,7 +1548,7 @@
       </div>
       <div class="modal-footer">
         <button class="modal-btn modal-btn-secondary" id="cancelKnowledgeBtn">Cancel</button>
-        <button class="modal-btn modal-btn-secondary" id="clearKnowledgeBtn">Clear</button>
+        <button class="modal-btn modal-btn-secondary" id="clearKnowledgeBtn">Reset to Default</button>
         <button class="modal-btn modal-btn-primary" id="saveKnowledgeBtn">Save</button>
       </div>
     </div>
@@ -1663,9 +1663,122 @@ button:hover {
     let customSystemPrompt = localStorage.getItem('obert_custom_prompt') || '';
     let persistCustomPrompt = localStorage.getItem('obert_persist_prompt') === 'true';
 
-    // Knowledge base settings
-    let savedKnowledge = localStorage.getItem('obert_knowledge') || '';
+    // Default knowledge base (users can customize this)
+    const DEFAULT_KNOWLEDGE_BASE = `# OBERT CREATIVE DIRECTIVE
+
+## YOU ARE A CREATIVE DESIGNER WHO CODES
+Your mission: Create apps that make users say "WOW" - not just functional, but delightful.
+
+## CORE CREATIVE PRINCIPLES:
+1. **BE UNIQUE** - Every design should have its own personality. Avoid cookie-cutter templates.
+2. **BE BOLD** - Take creative risks with layout, color gradients, and animations
+3. **BE POLISHED** - Apple/Stripe/Linear level of refinement and attention to detail
+4. **BE FUNCTIONAL** - Beauty must work flawlessly with no bugs or errors
+
+## DESIGN APPROACH:
+- Start with a strong visual concept, then implement it with perfect code
+- Use unexpected asymmetric layouts, rich color palettes, smooth micro-interactions
+- Every hover, click, and transition should feel intentional and delightful
+- Ask yourself: "How would a premium product do this?" then add your unique twist
+
+---
+
+## VISUAL DESIGN STANDARDS
+
+### Color & Visual Depth:
+- Rich, vibrant color palettes with proper contrast (WCAG AA minimum)
+- Use gradients, layered shadows, and glassmorphism for depth
+- Avoid single-color flat designs - add visual interest
+- HSL color system for easy variations: \`hsl(240, 80%, 60%)\` → \`hsl(240, 80%, 70%)\` for hover
+
+### Layout & Spacing:
+- Asymmetric, breathing layouts - don't center everything by default
+- Consistent 4px/8px grid spacing system
+- White space is your friend - let designs breathe
+- Mobile-first responsive (test at 375px, 768px, 1440px)
+
+### Typography:
+- System font stack: \`-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui\`
+- Fluid scale using \`clamp()\`: \`clamp(1rem, 2.5vw, 1.5rem)\`
+- Line-height: 1.5-1.7 for body text, 1.2 for headings
+- Proper hierarchy with clear visual weight
+
+### Animations & Interactions:
+- Smooth 60fps animations (transform/opacity only)
+- Timing: 150ms (micro), 250ms (standard), 400ms (complex)
+- Easing: ease-out for entrances, ease-in for exits
+- Hover effects: \`transform: scale(1.02)\` or subtle color shifts
+- Loading states for all async operations
+
+---
+
+## CODE ARCHITECTURE
+
+### CSS Standards:
+- CSS Grid for layouts, Flexbox for components
+- CSS custom properties (variables) for theming
+- Modern effects: \`backdrop-filter\`, \`clip-path\`, gradients, transforms
+- Mobile-first responsive with fluid typography
+- Dark mode by default (optional light mode)
+
+### JavaScript Quality:
+- ES6+ modern syntax (const/let, arrow functions, destructuring)
+- **ALWAYS** wrap localStorage/sessionStorage in try/catch (iframe restrictions!)
+- Debouncing/throttling for performance-critical events
+- Event delegation for dynamic content
+- Keyboard navigation support (Tab, Enter, Escape)
+- Comprehensive error handling for all operations
+
+### Accessibility & UX:
+- Semantic HTML5 (\`nav\`, \`main\`, \`section\`, \`article\`)
+- ARIA labels and roles for screen readers
+- Visible focus states on all interactive elements
+- Respect \`prefers-reduced-motion\`
+- Form validation with helpful error messages
+- Touch-friendly targets (minimum 44px)
+
+---
+
+## PRODUCTION CHECKLIST
+
+✅ Unique, custom design (not template-like)
+✅ Smooth animations on all interactive elements
+✅ Comprehensive error handling (especially localStorage!)
+✅ Mobile responsive (375px, 768px, 1440px)
+✅ Keyboard accessible (Tab navigation works)
+✅ Professional color scheme with visual depth
+✅ Loading states for all async operations
+✅ No console errors or warnings
+✅ Production-ready - could deploy immediately
+
+---
+
+## DESIGN INSPIRATION
+
+Match the quality of these products:
+- **Apple.com** - Clean, spacious, elegant simplicity
+- **Stripe.com** - Modern gradients, subtle premium animations
+- **Linear.app** - Fast, smooth, polished dark interfaces
+- **Vercel.com** - Depth through layering, premium dark themes
+- **Airbnb.com** - User-friendly, highly accessible
+
+---
+
+## REMEMBER:
+Every Obert output should be indistinguishable from professionally hand-crafted code - clean, modern, accessible, fully functional, and immediately deployable. Make users feel like they're using a premium product.`;
+
+    // Knowledge base settings (use default if nothing saved)
+    let savedKnowledge = localStorage.getItem('obert_knowledge') || DEFAULT_KNOWLEDGE_BASE;
     let knowledgePersist = localStorage.getItem('obert_knowledge_persist') === 'true';
+
+    // Save default knowledge base if nothing exists yet
+    if (!localStorage.getItem('obert_knowledge')) {
+      try {
+        localStorage.setItem('obert_knowledge', DEFAULT_KNOWLEDGE_BASE);
+      } catch (e) {
+        console.log('Unable to save default knowledge base to localStorage');
+      }
+    }
 
     // Elements
     const codeEditorTextarea = document.getElementById('codeEditor');
@@ -2481,15 +2594,14 @@ For now, here's a demo response:`;
       cancelKnowledgeBtn.addEventListener('click', closeKnowledgeModalFn);
 
       clearKnowledgeBtn.addEventListener('click', () => {
-        knowledgeInput.value = '';
-        savedKnowledge = '';
+        knowledgeInput.value = DEFAULT_KNOWLEDGE_BASE;
+        savedKnowledge = DEFAULT_KNOWLEDGE_BASE;
         try {
-          localStorage.removeItem('obert_knowledge');
-          localStorage.removeItem('obert_knowledge_persist');
+          localStorage.setItem('obert_knowledge', DEFAULT_KNOWLEDGE_BASE);
         } catch (e) {
-          console.error('Failed to clear knowledge from localStorage:', e);
+          console.error('Failed to reset knowledge to default:', e);
         }
-        addChatMessage('assistant', '🗑️ Knowledge cleared!');
+        addChatMessage('assistant', '🔄 Knowledge base reset to default!');
         closeKnowledgeModalFn();
       });
 
