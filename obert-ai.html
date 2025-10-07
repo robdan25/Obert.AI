@@ -649,35 +649,20 @@
       cursor: not-allowed;
     }
 
-    /* Animated thinking dots */
-    .thinking-dots {
-      display: inline-flex;
-      gap: 0.25rem;
-      align-items: center;
+    /* Animated thinking indicator */
+    .thinking-indicator {
+      display: inline-block;
+      font-size: 1.5em;
+      animation: thinking-pulse 1.4s ease-in-out infinite;
+      letter-spacing: 0.1em;
     }
 
-    .thinking-dots span {
-      animation: thinking 1.4s infinite;
-      opacity: 0.4;
-      font-size: 1.2em;
-    }
-
-    .thinking-dots span:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    .thinking-dots span:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-
-    @keyframes thinking {
-      0%, 60%, 100% {
-        opacity: 0.4;
-        transform: scale(1);
+    @keyframes thinking-pulse {
+      0%, 100% {
+        opacity: 0.3;
       }
-      30% {
+      50% {
         opacity: 1;
-        transform: scale(1.2);
       }
     }
 
@@ -2145,7 +2130,7 @@ Every Obert output should be indistinguishable from professionally hand-crafted 
 
       try {
         // Add animated thinking placeholder
-        const aiMsg = addChatMessage('assistant', '<div class="thinking-dots"><span>●</span><span>●</span><span>●</span></div>');
+        const aiMsg = addChatMessage('assistant', '<span class="thinking-indicator">●●●</span>');
 
         console.log('Calling DeepSeek API via proxy...');
 
