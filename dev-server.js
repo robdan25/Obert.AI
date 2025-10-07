@@ -4,7 +4,14 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3001;
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-bb97234a93c4497483b4b33fb95caacd';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+
+if (!DEEPSEEK_API_KEY) {
+  console.error('❌ ERROR: DEEPSEEK_API_KEY environment variable is not set!');
+  console.error('Please set it in your environment or Render dashboard.');
+  process.exit(1);
+}
+
 const PREVIEW_FILE = path.join(__dirname, 'preview.html');
 const OBERT_FILE = path.join(__dirname, 'obert-ai.html');
 

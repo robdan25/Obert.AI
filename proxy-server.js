@@ -1,8 +1,14 @@
 const http = require('http');
 const https = require('https');
 
-const DEEPSEEK_API_KEY = 'sk-bb97234a93c4497483b4b33fb95caacd';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const PORT = 3000;
+
+if (!DEEPSEEK_API_KEY) {
+  console.error('❌ ERROR: DEEPSEEK_API_KEY environment variable is not set!');
+  console.error('Set it with: export DEEPSEEK_API_KEY=your_key_here');
+  process.exit(1);
+}
 
 const server = http.createServer((req, res) => {
   // Enable CORS
